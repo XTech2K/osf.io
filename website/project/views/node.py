@@ -332,6 +332,31 @@ def node_choose_addons(auth, node, **kwargs):
     node.config_addons(request.json, auth)
 
 
+@must_have_permission(ADMIN)
+@must_not_be_registration
+def create_list(node, **kwargs):
+    node.create_mailing_list()
+    node.save()
+
+@must_have_permission(ADMIN)
+@must_not_be_registration
+def delete_list(node, **kwargs):
+    node.delete_mailing_list()
+    node.save()
+
+@collect_auth
+@must_not_be_registration
+def subscribe_list(node, auth, **kwargs):
+    node.subscribe_member(auth.user)
+
+@collect_auth
+@must_not_be_registration
+def unsubscribe_list(node, auth, **kwargs):
+    node.unsubscribe_member(auth.user)
+
+
+
+
 @must_be_valid_project
 @must_have_permission(READ)
 def node_contributors(auth, node, **kwargs):
@@ -750,6 +775,7 @@ def _view_project(node, auth, primary=False):
             'points': len(node.get_points(deleted=False, folders=False)),
             'piwik_site_id': node.piwik_site_id,
             'comment_level': node.comment_level,
+            'has_mailing_list': node.has_mailing_list,
             'has_comments': bool(getattr(node, 'commented', [])),
             'has_children': bool(getattr(node, 'commented', False)),
             'identifiers': {
@@ -785,6 +811,8 @@ def _view_project(node, auth, primary=False):
             'can_comment': node.can_comment(auth),
             'show_wiki_widget': _should_show_wiki_widget(node, user),
             'dashboard_id': dashboard_id,
+            'is_subscribed': (user.project_mailing_lists[node._primary_key]
+                              if node.has_mailing_list else None)
         },
         'badges': _get_badge(user),
         # TODO: Namespace with nested dicts

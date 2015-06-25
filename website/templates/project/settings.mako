@@ -20,13 +20,15 @@
     <!-- Begin left column -->
     <div class="col-sm-3 affix-parent">
 
-        % if 'write' in user['permissions']:
+        % if user['has_read_permissions']:
 
             <div class="panel panel-default" data-spy="affix" data-offset-top="60" data-offset-bottom="268"><!-- Begin sidebar -->
                 <ul class="nav nav-stacked nav-pills">
 
                     % if not node['is_registration']:
-                        <li><a href="#configureNodeAnchor">Configure ${node['node_type'].capitalize()}</a></li>
+                        % if 'write' in user['permissions']:
+                            <li><a href="#configureNodeAnchor">Configure ${node['node_type'].capitalize()}</a></li>
+                        % endif
 
                         % if 'admin' in user['permissions']:
                             <li><a href="#configureCommentingAnchor">Configure Commenting</a></li>
@@ -38,9 +40,11 @@
                             % if addon_enabled_settings:
                                 <li><a href="#configureAddonsAnchor">Configure Add-ons</a></li>
                             % endif
+                        % endif
 
-                            <li><a href="#configureNotificationsAnchor">Configure Notifications</a></li>
-                        %endif
+                        <li><a href="#configureNotificationsAnchor">Configure Notifications</a></li>
+
+                        <li><a href="#configureMailingListAnchor">Configure Mailing List</a></li>
 
                     % endif
 
@@ -268,6 +272,58 @@
             %endif
 
         % endif  ## End Configure Addons
+
+        % if user['has_read_permissions']: ## Begin Configure Mailing List
+
+            % if not node['is_registration']:
+
+                <div class="panel panel-default">
+                    <span id="configureMailingListAnchor" class="anchor"></span>
+
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Configure Mailing List</h3>
+                    </div>
+
+                        % if node['has_mailing_list']:
+                            <div class="help-block" style="padding-left: 15px">
+                                <p>This ${node['node_type']} has a mailing list at <a href="mailto: ${node['id']}@osf.io">${node['id']}@osf.io</a>.</p>
+                            </div>
+                            <div class="panel-body">
+                                % if user['is_subscribed']:
+                                    <button id="mailingUnsub" class="btn btn-warning">Unsubscribe</button>
+                                % else:
+                                    <button id="mailingSub" class="btn btn-primary">Subscribe</button>
+                                % endif
+                            </div>
+                            % if 'admin' in user['permissions']:
+                                <hr />
+                                <div class="panel-body">
+                                    <div class="help-block">
+                                        <p>Disabling this project's mailing list will prevent all members from recieving or sending to the mailing list location</p>
+                                    <div>
+                                        <button id="deleteMailing" class="btn btn-danger">Disable</button>
+                                    </div>
+                                </div>
+                            % endif
+                            <div></div>
+                        % else:
+                            <div class="help-block" style="padding-left: 15px">
+                                <p>This ${node['node_type']} does not currently have a mailing list.</p>
+                            </div>
+                            <div class="panel-body">
+                                % if 'admin' in user['permissions']:
+                                    <div>
+                                        <button id="createMailing" class="btn btn-success">Enable</button>
+                                    </div>
+                                % endif
+                            </div>
+                        % endif
+                    </div>
+
+                </div>
+
+            % endif
+        % endif
 
         % if 'admin' in user['permissions']:  ## Begin Retract Registration
 

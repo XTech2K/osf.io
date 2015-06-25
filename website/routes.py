@@ -1388,6 +1388,46 @@ def make_url_map(app):
 
         Rule(
             [
+                '/project/<pid>/mailing/',
+                '/project/<pid>/node/<nid>/mailing/',
+            ],
+            'post',
+            project_views.node.create_list,
+            json_renderer,
+        ),
+
+        Rule(
+            [
+                '/project/<pid>/mailing/',
+                '/project/<pid>/node/<nid>/mailing/',
+            ],
+            'delete',
+            project_views.node.delete_list,
+            json_renderer,
+        ),
+
+        Rule(
+            [
+                '/project/<pid>/mailing/sub/',
+                '/project/<pid>/node/<nid>/mailing/sub/',
+            ],
+            'post',
+            project_views.node.subscribe_list,
+            json_renderer,
+        ),
+
+        Rule(
+            [
+                '/project/<pid>/mailing/sub/',
+                '/project/<pid>/node/<nid>/mailing/sub/',
+            ],
+            'delete',
+            project_views.node.unsubscribe_list,
+            json_renderer,
+        ),
+
+        Rule(
+            [
                 '/project/<pid>/settings/addons/',
                 '/project/<pid>/node/<nid>/settings/addons/',
             ],

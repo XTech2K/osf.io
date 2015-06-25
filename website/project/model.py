@@ -39,7 +39,7 @@ from framework.sentry import log_exception
 from framework.transactions.context import TokuTransaction
 from framework.utils import iso8601format
 
-from website import language, settings, security
+from website import language, settings, security, mailing_lists
 from website.util import web_url_for
 from website.util import api_url_for
 from website.exceptions import (
@@ -637,6 +637,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
     contributors = fields.ForeignField('user', list=True, backref='contributed')
     users_watching_node = fields.ForeignField('user', list=True, backref='watched')
 
+    has_mailing_list = fields.BooleanField(default=True)
+
     logs = fields.ForeignField('nodelog', list=True, backref='logged')
     tags = fields.ForeignField('tag', list=True, backref='tagged')
 
@@ -1019,6 +1021,58 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             )
         return self.is_contributor(auth.user)
 
+    def create_mailing_list(self, save=False):
+        self.has_mailing_list = True
+
+        if save:
+            self.save()
+
+    def delete_mailing_list(self, save=False):
+        self.has_mailing_list = False
+
+        if save:
+            self.save()
+
+    def subscribe_member(self, user):
+        user.subscribe(self._id)
+
+    def unsubscribe_member(self, user):
+        user.unsubscribe(self._id)
+
+    def update_mailing(self):
+        info, members = mailing_lists.get_list(self._id)
+
+        if self.has_mailing_list:
+
+            if 'list' in info.keys():
+                info = info['list']
+                members = members['items']
+                member_ids = [member['vars']['id'] for member in members]
+                contrib_ids = [contrib._id for contrib in self.contributors]
+
+                if info['name'] != self.title:
+                    pass
+
+                for contrib in self.contributors:
+                    if contrib._id not in member_ids:
+                        contrib.add_to_list(self._id)
+
+                for member in members:
+                    if member['vars']['id'] not in contrib_ids:
+                        mailing_lists.remove_member(self._id, member['address'])
+
+            else:
+                mailing_lists.create_list(self._id, self.title, self.contributors)
+                return
+
+        else:
+
+            if 'list' in info.keys():
+                mailing_lists.delete_list(self._id)
+                if self.is_deleted:
+                    for contrib in self.contributors:
+                        contrib.remove_from_list(self._id)
+
     def update(self, fields, auth=None, save=True):
         if self.is_registration:
             raise NodeUpdateError(reason="Registered content cannot be updated")
@@ -1087,6 +1141,9 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             suppress_log = False
 
         saved_fields = super(Node, self).save(*args, **kwargs)
+
+        if not (self.is_folder or self.is_dashboard or self.is_registration):
+            self.update_mailing()
 
         if first_save and is_original and not suppress_log:
             # TODO: This logic also exists in self.use_as_template()
@@ -1619,6 +1676,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
                 save=True,
             )
 
+        self.delete_mailing_list()
+
         self.is_deleted = True
         self.deleted_date = date
         self.save()
@@ -2111,6 +2170,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         self.clear_permission(contributor)
         if contributor._id in self.visible_contributor_ids:
             self.visible_contributor_ids.remove(contributor._id)
+
+        contributor.remove_from_list(self._id)
 
         # Node must have at least one registered admin user
         # TODO: Move to validator or helper

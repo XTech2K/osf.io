@@ -141,4 +141,74 @@ ProjectSettings.getConfirmationCode = function(nodeType) {
     });
 };
 
+ProjectSettings.subscribeMailingList = function(nodetype) {
+    var request = $.ajax({
+        type: 'post',
+        dataType: 'json',
+        url: nodeApiUrl + "mailing/sub/"
+    });
+    request.done(function() {
+        window.location.reload();
+    });
+    request.fail($osf.handleJSONError);
+};
+
+ProjectSettings.unsubscribeMailingList = function(nodeType) {
+
+    var message = '<p>You may miss important messages from other contributors.';
+
+    bootbox.confirm({
+        title: 'Are you sure you want to unsubscribe from this ' + nodeType + '\'s mailing list?',
+        message: message,
+        callback: function (result) {
+            if (result) {
+                var request = $.ajax({
+                    type: 'delete',
+                    dataType: 'json',
+                    url: nodeApiUrl + "mailing/sub/"
+                });
+                request.done(function () {
+                    window.location.reload();
+                });
+                request.fail($osf.handleJSONError);
+            }
+        }
+    });
+};
+
+ProjectSettings.createMailingList = function(nodeType) {
+    var request = $.ajax({
+        type: 'post',
+        dataType: 'json',
+        url: nodeApiUrl + "mailing/"
+    });
+    request.done(function() {
+        window.location.reload();
+    });
+    request.fail($osf.handleJSONError);
+};
+
+ProjectSettings.deleteMailingList = function(nodeType) {
+
+    var message = '<p>All subscription settings will reset to default if this list is created again.';
+
+    bootbox.confirm({
+        title: 'Are you sure you want to delete this ' + nodeType + '\'s mailing list?',
+        message: message,
+        callback: function (result) {
+            if (result) {
+                var request = $.ajax({
+                    type: 'delete',
+                    dataType: 'json',
+                    url: nodeApiUrl + "mailing/"
+                });
+                request.done(function () {
+                    window.location.reload();
+                });
+                request.fail($osf.handleJSONError);
+            }
+        }
+    });
+};
+
 module.exports = ProjectSettings;

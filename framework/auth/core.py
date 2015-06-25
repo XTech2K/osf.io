@@ -27,7 +27,7 @@ from framework.guid.model import GuidStoredObject
 from framework.bcrypt import generate_password_hash, check_password_hash
 from framework.auth.exceptions import ChangePasswordError, ExpiredTokenError
 
-from website import mails, settings, filters, security
+from website import mails, settings, filters, security, mailing_lists
 
 
 name_formatters = {
@@ -293,6 +293,14 @@ class User(GuidStoredObject, AddonModelMixin):
 
     # email lists to which the user has chosen a subscription setting
     mailing_lists = fields.DictionaryField()
+    # Format: {
+    #   'list1': True,
+    #   'list2: False,
+    #    ...
+    # }
+
+    # project mailing lists to which the user is a member, subscribed or not
+    project_mailing_lists = fields.DictionaryField()
     # Format: {
     #   'list1': True,
     #   'list2: False,
@@ -861,6 +869,30 @@ class User(GuidStoredObject, AddonModelMixin):
             for each
             in email_verifications.values()
         ]
+
+    def add_to_list(self, list_id):
+        """Adds the user to a project mailing list based on its id"""
+        if list_id not in self.project_mailing_lists.keys():
+            self.project_mailing_lists[list_id] = True
+        mailing_lists.add_member(list_id, self._id, self.email, self.display_full_name(), self.project_mailing_lists[list_id])
+        self.save()
+
+    def remove_from_list(self, list_id):
+        """Removes the user from a project mailing list based on its id"""
+        del self.project_mailing_lists[list_id]
+        self.save()
+
+    def subscribe(self, list_id):
+        """Subscribes the user to a project mailing list"""
+        mailing_lists.subscribe(list_id, self.email)
+        self.project_mailing_lists[list_id] = True
+        self.save()
+
+    def unsubscribe(self, list_id):
+        """unsubscribes the user from a project mailing list"""
+        mailing_lists.unsubscribe(list_id, self.email)
+        self.project_mailing_lists[list_id] = False
+        self.save()
 
     def update_search_nodes(self):
         """Call `update_search` on all nodes on which the user is a

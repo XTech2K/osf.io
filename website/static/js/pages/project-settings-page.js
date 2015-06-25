@@ -72,6 +72,22 @@ $(document).ready(function() {
         ProjectSettings.getConfirmationCode(ctx.node.nodeType);
     });
 
+    $('#mailingSub').on('click', function() {
+        ProjectSettings.subscribeMailingList(ctx.node.nodeType);
+    });
+
+    $('#mailingUnsub').on('click', function() {
+        ProjectSettings.unsubscribeMailingList(ctx.node.nodeType);
+    });
+
+    $('#createMailing').on('click', function() {
+        ProjectSettings.createMailingList(ctx.node.nodeType);
+    });
+
+    $('#deleteMailing').on('click', function() {
+        ProjectSettings.deleteMailingList(ctx.node.nodeType);
+    });
+
     // TODO: Knockout-ify me
     $('#commentSettings').on('submit', function() {
         var $commentMsg = $('#configureCommentingMessage');
