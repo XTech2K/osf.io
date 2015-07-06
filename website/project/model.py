@@ -639,6 +639,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
     has_mailing_list = fields.BooleanField(default=True)
     mailing_info = fields.DictionaryField()
+    update_mailing = fields.BooleanField(default=False)
 
     logs = fields.ForeignField('nodelog', list=True, backref='logged')
     tags = fields.ForeignField('tag', list=True, backref='tagged')
@@ -1025,12 +1026,14 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
     def create_mailing_list(self, save=False):
         self.has_mailing_list = True
+        self.update_mailing = True
 
         if save:
             self.save()
 
     def delete_mailing_list(self, save=False):
         self.has_mailing_list = False
+        self.update_mailing = True
 
         if save:
             self.save()
@@ -1041,16 +1044,19 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             'email': user.email,
             'subscribed': True
         }
+        self.update_mailing = True
 
         if save:
             self.save()
 
     def subscribe_member(self, user):
         self.mailing_info[user._id]['subscribed'] = True
+        self.update_mailing = True
         self.save()
 
     def unsubscribe_member(self, user):
         self.mailing_info[user._id]['subscribed'] = False
+        self.update_mailing = True
         self.save()
 
     def update(self, fields, auth=None, save=True):
@@ -1122,9 +1128,11 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
         saved_fields = super(Node, self).save(*args, **kwargs)
 
-        if not (self.is_folder or self.is_dashboard or self.is_registration):
+        if self.update_mailing and not \
+                (self.is_folder or self.is_dashboard or self.is_registration):
             mailing_lists.update_list(self._id, self.title, self.has_mailing_list,
                                       self.mailing_info)
+            self.update_mailing = False
 
         if first_save and is_original and not suppress_log:
             # TODO: This logic also exists in self.use_as_template()
