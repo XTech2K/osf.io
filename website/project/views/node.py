@@ -344,6 +344,12 @@ def delete_list(node, **kwargs):
     node.delete_mailing_list()
     node.save()
 
+# def record_message(**kwargs):
+#     message = request.form.to_dict()
+#     node_id = message['To'][:5]
+#     node = Node.find_one(Q('_id','eq',node_id))
+#     node.record_message(message)
+
 @collect_auth
 @must_not_be_registration
 def subscribe_list(node, auth, **kwargs):
@@ -811,8 +817,7 @@ def _view_project(node, auth, primary=False):
             'can_comment': node.can_comment(auth),
             'show_wiki_widget': _should_show_wiki_widget(node, user),
             'dashboard_id': dashboard_id,
-            'is_subscribed': (user.project_mailing_lists[node._primary_key]
-                              if node.has_mailing_list else None)
+            'is_subscribed': node.mailing_info[user._id]['subscribed']
         },
         'badges': _get_badge(user),
         # TODO: Namespace with nested dicts

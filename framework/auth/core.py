@@ -299,14 +299,6 @@ class User(GuidStoredObject, AddonModelMixin):
     #    ...
     # }
 
-    # project mailing lists to which the user is a member, subscribed or not
-    project_mailing_lists = fields.DictionaryField()
-    # Format: {
-    #   'list1': True,
-    #   'list2: False,
-    #    ...
-    # }
-
     # nicknames, or other names by which this used is known
     # TODO: remove - unused
     aka = fields.StringField(list=True)

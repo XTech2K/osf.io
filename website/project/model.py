@@ -638,6 +638,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
     users_watching_node = fields.ForeignField('user', list=True, backref='watched')
 
     has_mailing_list = fields.BooleanField(default=True)
+    mailing_info = fields.DictionaryField()
 
     logs = fields.ForeignField('nodelog', list=True, backref='logged')
     tags = fields.ForeignField('tag', list=True, backref='tagged')
@@ -673,6 +674,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         if self.creator:
             self.contributors.append(self.creator)
             self.set_visible(self.creator, visible=True, log=False)
+            self.add_member(self.creator)
 
             # Add default creator permissions
             for permission in CREATOR_PERMISSIONS:
@@ -1029,20 +1031,27 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
     def delete_mailing_list(self, save=False):
         self.has_mailing_list = False
-        for contrib in self.contributors:
-            try:
-                del contrib.project_mailing_lists[self._id]
-            except KeyError:
-                pass
+
+        if save:
+            self.save()
+
+    def add_member(self, user, save=False):
+        self.mailing_info[user._id] = {
+            'name': user.display_full_name(),
+            'email': user.email,
+            'subscribed': True
+        }
 
         if save:
             self.save()
 
     def subscribe_member(self, user):
-        mailing_lists.subscribe(self._id, user)
+        self.mailing_info[user._id]['subscribed'] = True
+        self.save()
 
     def unsubscribe_member(self, user):
-        mailing_lists.unsubscribe(self._id, user)
+        self.mailing_info[user._id]['subscribed'] = False
+        self.save()
 
     def update(self, fields, auth=None, save=True):
         if self.is_registration:
@@ -1114,11 +1123,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         saved_fields = super(Node, self).save(*args, **kwargs)
 
         if not (self.is_folder or self.is_dashboard or self.is_registration):
-            if first_save:
-                self.creator.project_mailing_lists[self._id] = True
-                self.creator.save()
             mailing_lists.update_list(self._id, self.title, self.has_mailing_list,
-                                         [contrib._id for contrib in self.contributors])
+                                      self.mailing_info)
 
         if first_save and is_original and not suppress_log:
             # TODO: This logic also exists in self.use_as_template()
@@ -2146,7 +2152,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         if contributor._id in self.visible_contributor_ids:
             self.visible_contributor_ids.remove(contributor._id)
 
-        del contributor.project_mailing_lists[self._id]
+        del self.mailing_info[contributor._id]
 
         # Node must have at least one registered admin user
         # TODO: Move to validator or helper
@@ -2328,6 +2334,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             self.contributors.append(contrib_to_add)
             if visible:
                 self.set_visible(contrib_to_add, visible=True, log=False)
+            self.add_member(contrib_to_add)
 
             # Add default contributor permissions
             permissions = permissions or DEFAULT_CONTRIBUTOR_PERMISSIONS

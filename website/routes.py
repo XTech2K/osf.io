@@ -1406,6 +1406,15 @@ def make_url_map(app):
             json_renderer,
         ),
 
+        # Rule(
+        #     [
+        #         '/mailing/record/',
+        #     ],
+        #     'post',
+        #     project_views.node.record_message,
+        #     json_renderer,
+        # ),
+
         Rule(
             [
                 '/project/<pid>/mailing/sub/',

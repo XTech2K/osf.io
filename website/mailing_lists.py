@@ -5,11 +5,8 @@ import json
 
 from framework import sentry
 from framework.tasks import app
-from framework.auth.core import User
 from framework.tasks.handlers import queued_task
 from framework.auth.signals import user_confirmed
-
-from framework.transactions.context import transaction
 
 from website import settings
 
@@ -33,7 +30,7 @@ def get_list(node_id):
 
     return info, members
 
-def create_list(node_id, node_title, contributors):
+def create_list(node_id, node_title, subscriptions):
     requests.post(
         'https://api.mailgun.net/v3/lists',
         auth=('api', MAILGUN_API_KEY),
@@ -43,8 +40,8 @@ def create_list(node_id, node_title, contributors):
             'access_level': 'members'
         }
     )
-    for contrib in contributors:
-        add_member(node_id, contrib)
+    for _id in subscriptions.keys():
+        add_member(node_id, subscriptions[_id], _id)
 
 def delete_list(node_id):
     requests.delete(
@@ -52,54 +49,47 @@ def delete_list(node_id):
         auth=('api', MAILGUN_API_KEY)
     )
 
-def add_member(node_id, user):
+def add_member(node_id, user, user_id):
     unsub_url = OWN_URL + node_id + '/settings/#configureMailingListAnchor'
     requests.post(
         'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members',
         auth=('api', MAILGUN_API_KEY),
         data={
-            'subscribed': user.project_mailing_lists[node_id],
-            'address': user.email,
-            'name': user.display_full_name(),
-            'vars': '{"list_unsubscribe": "' + unsub_url + '"}'
+            'subscribed': user['subscribed'],
+            'address': user['email'],
+            'name': user['name'],
+            'vars': '{"list_unsubscribe": "' + unsub_url + '", "id": "' + user_id + '"}'
         }
     )
 
-
-def remove_member(node_id, user):
+def remove_member(node_id, email):
     requests.delete(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + user.email,
+        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
         auth=('api', MAILGUN_API_KEY)
     )
-    user.save()
 
-def subscribe(node_id, user):
+def subscribe(node_id, email):
     requests.put(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + user.email,
+        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
         auth=('api', MAILGUN_API_KEY),
         data={
             'subscribed': True
         }
     )
-    user.project_mailing_lists[node_id] = True
-    user.save()
 
-def unsubscribe(node_id, user):
+def unsubscribe(node_id, email):
     requests.put(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + user.email,
+        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
         auth=('api', MAILGUN_API_KEY),
         data={
             'subscribed': False
         }
     )
-    user.project_mailing_lists[node_id] = False
-    user.save()
 
 @queued_task
 @app.task
-@transaction()
-def update_list(node_id, node_title, node_has_list, contrib_ids):
-    contributors = [User.load(contrib_id) for contrib_id in contrib_ids]
+def update_list(node_id, node_title, node_has_list, subscriptions):
+    contrib_ids = subscriptions.keys()
 
     info, members = get_list(node_id)
 
@@ -113,16 +103,22 @@ def update_list(node_id, node_title, node_has_list, contrib_ids):
             if info['name'] != node_title:
                 pass
 
-            for contrib in contributors:
-                if contrib._id not in member_ids:
-                    contrib.add_to_list(node_id)
+            for contrib_id in contrib_ids:
+                if contrib_id not in member_ids:
+                    add_member(node_id, subscriptions[contrib_id], contrib_id)
+
 
             for member in members:
-                if member['vars']['id'] not in contrib_ids:
+                if member['vars']['id'] not in subscriptions.keys():
                     remove_member(node_id, member['address'])
+                elif member['subscribed'] != subscriptions[member['vars']['id']]['subscribed']:
+                    if member['subscribed'] == False:
+                        subscribe(node_id, member['address'])
+                    else:
+                        unsubscribe(node_id, member['address'])
 
         else:
-            create_list(node_id, node_title, contributors)
+            create_list(node_id, node_title, subscriptions)
             return
 
     else:
