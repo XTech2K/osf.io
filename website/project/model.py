@@ -640,6 +640,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
     has_mailing_list = fields.BooleanField(default=True)
     mailing_info = fields.DictionaryField()
     update_mailing = fields.BooleanField(default=False)
+    # mailed_messages = fields.DictionaryField(list=True)
 
     logs = fields.ForeignField('nodelog', list=True, backref='logged')
     tags = fields.ForeignField('tag', list=True, backref='tagged')
@@ -1058,6 +1059,17 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         self.mailing_info[user._id]['subscribed'] = False
         self.update_mailing = True
         self.save()
+
+    # def record_message(self, message):
+    #     sender = get_user(email=message['From']) or self.contributors[0]
+    #     full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + "\n\nThis comment was originally an email to this project's mailing list"
+    #     Comment.create(
+    #         content=full_message,
+    #         node=self,
+    #         target=self,
+    #         user=sender,
+    #         auth=Auth(user=sender)
+    #     )
 
     def update(self, fields, auth=None, save=True):
         if self.is_registration:

@@ -347,8 +347,20 @@ def delete_list(node, **kwargs):
 # def record_message(**kwargs):
 #     message = request.form.to_dict()
 #     node_id = message['To'][:5]
+#     parsed_message = {
+#         'To': message['To'],
+#         'From': message['From'],
+#         'subject': message['subject'],
+#         'text': message['stripped-text']
+#     }
 #     node = Node.find_one(Q('_id','eq',node_id))
-#     node.record_message(message)
+#     node.record_message(parsed_message)
+#
+# def bounced_message(**kwargs):
+#     message = request.form.to_dict()
+#     print message
+#     node_id = message.get('mailing-list','*****')[:5]
+#     node = Node.find_one(Q('_id','eq',node_id))
 
 @collect_auth
 @must_not_be_registration
@@ -817,7 +829,7 @@ def _view_project(node, auth, primary=False):
             'can_comment': node.can_comment(auth),
             'show_wiki_widget': _should_show_wiki_widget(node, user),
             'dashboard_id': dashboard_id,
-            'is_subscribed': node.mailing_info[user._id]['subscribed']
+            'is_subscribed': node.mailing_info[user._id]['subscribed'] if user else None
         },
         'badges': _get_badge(user),
         # TODO: Namespace with nested dicts

@@ -1408,10 +1408,19 @@ def make_url_map(app):
 
         # Rule(
         #     [
-        #         '/mailing/record/',
+        #         '/mailing/messages/',
         #     ],
         #     'post',
         #     project_views.node.record_message,
+        #     json_renderer,
+        # ),
+        #
+        # Rule(
+        #     [
+        #         '/mailing/bounce/',
+        #     ],
+        #     'post',
+        #     project_views.node.bounced_message,
         #     json_renderer,
         # ),
 
