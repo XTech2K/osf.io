@@ -637,7 +637,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
     contributors = fields.ForeignField('user', list=True, backref='contributed')
     users_watching_node = fields.ForeignField('user', list=True, backref='watched')
 
-    has_mailing_list = fields.BooleanField(default=True)
+    has_mailing_list = fields.BooleanField(default=False)
     mailing_info = fields.DictionaryField()
     update_mailing = fields.BooleanField(default=False)
     # mailed_messages = fields.DictionaryField(list=True)
@@ -677,6 +677,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             self.contributors.append(self.creator)
             self.set_visible(self.creator, visible=True, log=False)
             self.add_member(self.creator)
+            if self.category == 'project':
+                self.has_mailing_list = True
 
             # Add default creator permissions
             for permission in CREATOR_PERMISSIONS:
@@ -1140,8 +1142,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
         saved_fields = super(Node, self).save(*args, **kwargs)
 
-        if self.update_mailing and not \
-                (self.is_folder or self.is_dashboard or self.is_registration):
+        if self.update_mailing:
             mailing_lists.update_list(self._id, self.title, self.has_mailing_list,
                                       self.mailing_info)
             self.update_mailing = False
