@@ -10,10 +10,10 @@ from framework.auth.signals import user_confirmed
 
 from website import settings
 
-from website.settings.local import MAILGUN_API_KEY, OWN_URL
+from website.settings.local import MAILGUN_API_KEY, MAILGUN_DOMAIN, OWN_URL
 
 def address(node_id):
-    return node_id + '@sandbox366bcd27e2ea4dc1b81db4df458924d3.mailgun.org'
+    return node_id + '@' + MAILGUN_DOMAIN
 
 def get_list(node_id):
     info = requests.get(
@@ -40,8 +40,14 @@ def create_list(node_id, node_title, subscriptions):
             'access_level': 'members'
         }
     )
+    targets = []
     for _id in subscriptions.keys():
         add_member(node_id, subscriptions[_id], _id)
+        targets.append(subscriptions[_id]['email'])
+    send_message(node_id, node_title, targets, {
+        'subject': "Mailing List Created for " + node_title,
+        'text': "A mailing list has been created/enabled for the `oject " + node_title + "."
+    })
 
 def delete_list(node_id):
     requests.delete(
@@ -88,6 +94,17 @@ def unsubscribe(node_id, email):
 
 @queued_task
 @app.task
+def send_message(node_id, node_title, targets, message):
+    requests.post(
+        "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
+        auth=("api", MAILGUN_API_KEY),
+        data={"from": node_title + " Mailing List <" + address(node_id) + ">",
+              "to": targets,
+              "subject": message['subject'],
+              "text": message['text']})
+
+@queued_task
+@app.task
 def update_list(node_id, node_title, node_has_list, subscriptions):
     contrib_ids = subscriptions.keys()
 
@@ -106,7 +123,6 @@ def update_list(node_id, node_title, node_has_list, subscriptions):
             for contrib_id in contrib_ids:
                 if contrib_id not in member_ids:
                     add_member(node_id, subscriptions[contrib_id], contrib_id)
-
 
             for member in members:
                 if member['vars']['id'] not in subscriptions.keys():
