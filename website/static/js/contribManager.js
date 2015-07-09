@@ -11,6 +11,7 @@ var $osf = require('./osfHelpers');
 var contribsEqual = function(a, b) {
     return a.id === b.id &&
         a.visible === b.visible &&
+        a.subscribed === b.subscribed &&
         a.permission === b.permission &&
         Boolean(a.deleteStaged) === Boolean(b.deleteStaged);
 };
@@ -59,6 +60,7 @@ var ContributorModel = function(contributor, currentUserCanEdit, pageOwner, isRe
     self.currentUserCanEdit = currentUserCanEdit;
     self.isAdmin = isAdmin;
     self.visible = ko.observable(contributor.visible);
+    self.subscribed = ko.observable(contributor.subscribed)
     self.permission = ko.observable(contributor.permission);
     self.curPermission = ko.observable(self.getPermission(self.permission()));
     self.deleteStaged = ko.observable(contributor.deleteStaged || false);

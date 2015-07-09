@@ -25,7 +25,7 @@
                 <table id="manageContributorsTable" class="table">
                     <thead>
                         <tr>
-                        <th class="col-md-6">Name</th>
+                        <th class="col-md-4">Name</th>
                         <th class="col-md-2">
                             Permissions
                             <i class="fa fa-question-circle permission-info"
@@ -41,6 +41,16 @@
                             <i class="fa fa-question-circle visibility-info"
                                     data-toggle="popover"
                                     data-title="Bibliographic Contributor Information"
+                                    data-container="body"
+                                    data-placement="right"
+                                    data-html="true"
+                                ></i>
+                        </th>
+                        <th class="col-md-2">
+                            On Mailing List
+                            <i class="fa fa-question-circle mailing-subscription"
+                                    data-toggle="popover"
+                                    data-title="Mailing List Information"
                                     data-container="body"
                                     data-placement="right"
                                     data-html="true"
@@ -210,6 +220,13 @@
                     type="checkbox" class="no-sort biblio"
                     data-bind="checked: visible, enable: $parent.canEdit() && !contributor.isAdmin"
                 />
+        </td>
+        <td>
+            <input
+                    type="checkbox" class="no-sort mailing"
+                    data-bind="checked: subscribed, enable: $parent.canEdit() && !contributor.isAdmin"
+                />
+
         </td>
         <td>
           <!-- ko if: contributor.canEdit() -->

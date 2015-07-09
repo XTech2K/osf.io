@@ -2274,6 +2274,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
                     self.set_permissions(user, permissions, save=False)
                     permissions_changed[user._id] = permissions
                 self.set_visible(user, user_dict['visible'], auth=auth)
+                self.mailing_info[user._id]['subscribed'] = user_dict['subscribed']
                 users.append(user)
                 user_ids.append(user_dict['id'])
 

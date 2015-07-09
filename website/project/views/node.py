@@ -829,7 +829,7 @@ def _view_project(node, auth, primary=False):
             'can_comment': node.can_comment(auth),
             'show_wiki_widget': _should_show_wiki_widget(node, user),
             'dashboard_id': dashboard_id,
-            'is_subscribed': node.mailing_info[user._id]['subscribed'] if user else None
+            'is_subscribed': node.mailing_info.get(user._id, {'subscribed': None})['subscribed'] if user else None
         },
         'badges': _get_badge(user),
         # TODO: Namespace with nested dicts

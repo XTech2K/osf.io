@@ -246,6 +246,17 @@ $(document).ready(function() {
         trigger: 'hover'
     });
 
+    var MailingListInfoHtml = 'A contributor who is not subscribed to a project mailing list ' +
+        'will not recieve any of the emails sent to it. They will, however, still be able to ' +
+        'send emails themselves, which will still be distributed and/or logged as per how the ' +
+        'mailing list was set.<br><br>You can change your subscription setting on the settings page.';
+
+    $('.mailing-subscription').attr(
+        'data-content', MailingListInfoHtml
+    ).popover({
+        trigger: 'hover'
+    });
+
     ////////////////////
     // Event Handlers //
     ////////////////////

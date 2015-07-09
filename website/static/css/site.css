@@ -968,6 +968,10 @@ form.form-horizontal.form-horizontal-narrow .control-group {
     margin: 4px 60% 0 40%;
 }
 
+#manageContributors .mailing {
+    margin: 4px 60% 0 40%;
+}
+
 #addContributors table {
     border-collapse: separate;
     border-spacing: 5px;

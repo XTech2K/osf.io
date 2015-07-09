@@ -54,11 +54,13 @@ def serialize_user(user, node=None, admin=False, full=False):
         if admin:
             flags = {
                 'visible': False,
+                'subscribed': False,
                 'permission': 'read',
             }
         else:
             flags = {
                 'visible': user._id in node.visible_contributor_ids,
+                'subscribed': node.mailing_info.get(user._id, {'subscribed': False})['subscribed'],
                 'permission': reduce_permissions(node.get_permissions(user)),
             }
         ret.update(flags)
