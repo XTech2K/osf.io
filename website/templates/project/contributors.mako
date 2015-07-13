@@ -223,7 +223,7 @@
                     data-bind="checked: visible, enable: $parent.canEdit() && !contributor.isAdmin"
                 />
         </td>
-        <td>
+        <td class="text-center">
             <input
                     type="checkbox" class="no-sort mailing"
                     data-bind="checked: subscribed, enable: $parent.canEdit() && !contributor.isAdmin"

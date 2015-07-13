@@ -190,7 +190,7 @@ ProjectSettings.createMailingList = function(nodeType) {
 
 ProjectSettings.deleteMailingList = function(nodeType) {
 
-    var message = '<p>All subscription settings will reset to default if this list is created again.';
+    var message = "<p>Disabling this project's mailing list will prevent all members from recieving or sending to the mailing list location.";
 
     bootbox.confirm({
         title: 'Are you sure you want to delete this ' + nodeType + '\'s mailing list?',

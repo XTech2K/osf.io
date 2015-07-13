@@ -279,7 +279,7 @@
                 <div class="panel panel-default">
                     <span id="configureMailingListAnchor" class="anchor"></span>
 
-                    <div class="panel-heading">
+                    <div class="panel-heading clearfix">
                         <h3 class="panel-title">Configure Mailing List</h3>
                     </div>
 
@@ -295,13 +295,8 @@
                                 % endif
                             </div>
                             % if 'admin' in user['permissions']:
-                                <hr />
                                 <div class="panel-body">
-                                    <div class="help-block">
-                                        <p>Disabling this project's mailing list will prevent all members from recieving or sending to the mailing list location</p>
-                                    <div>
-                                        <button id="deleteMailing" class="btn btn-danger">Disable</button>
-                                    </div>
+                                    <button id="deleteMailing" class="btn btn-danger">Disable</button>
                                 </div>
                             % endif
                             <div></div>
