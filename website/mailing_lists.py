@@ -9,6 +9,7 @@ from framework.tasks.handlers import queued_task
 from framework.auth.signals import user_confirmed
 
 from website import settings
+from website.util import waterbutler_url_for
 
 from website.settings.local import MAILGUN_API_KEY, MAILGUN_DOMAIN, OWN_URL
 
@@ -102,6 +103,17 @@ def send_message(node_id, node_title, targets, message):
               "to": targets,
               "subject": message['subject'],
               "text": message['text']})
+
+def upload_attachment(attachment, node, user):
+    attachment.seek(0)
+    name = '/' + (attachment.filename or settings.MISSING_FILE_NAME)
+    content = attachment.read()
+    upload_url = waterbutler_url_for('upload', 'osfstorage', name, node, user=user)
+
+    requests.put(
+        upload_url,
+        data=content,
+    )
 
 @queued_task
 @app.task

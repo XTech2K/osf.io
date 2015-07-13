@@ -1406,14 +1406,14 @@ def make_url_map(app):
             json_renderer,
         ),
 
-        # Rule(
-        #     [
-        #         '/mailing/messages/',
-        #     ],
-        #     'post',
-        #     project_views.node.record_message,
-        #     json_renderer,
-        # ),
+        Rule(
+            [
+                '/mailing/messages/',
+            ],
+            'post',
+            project_views.node.record_message,
+            json_renderer,
+        ),
         #
         # Rule(
         #     [

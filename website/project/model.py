@@ -1062,16 +1062,12 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         self.update_mailing = True
         self.save()
 
-    # def record_message(self, message):
-    #     sender = get_user(email=message['From']) or self.contributors[0]
-    #     full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + "\n\nThis comment was originally an email to this project's mailing list"
-    #     Comment.create(
-    #         content=full_message,
-    #         node=self,
-    #         target=self,
-    #         user=sender,
-    #         auth=Auth(user=sender)
-    #     )
+    def record_message(self, message):
+        # mailing_lists.get_message(self._id, message)
+        sender = get_user(email=message['From']) or self.contributors[0]
+        full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + "\n\nThis comment was originally an email to this project's mailing list"
+        for attachment in message['attachments']:
+            mailing_lists.upload_attachment(attachment, self, sender)
 
     def update(self, fields, auth=None, save=True):
         if self.is_registration:

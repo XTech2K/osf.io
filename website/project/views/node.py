@@ -344,17 +344,19 @@ def delete_list(node, **kwargs):
     node.delete_mailing_list()
     node.save()
 
-# def record_message(**kwargs):
-#     message = request.form.to_dict()
-#     node_id = message['To'][:5]
-#     parsed_message = {
-#         'To': message['To'],
-#         'From': message['From'],
-#         'subject': message['subject'],
-#         'text': message['stripped-text']
-#     }
-#     node = Node.find_one(Q('_id','eq',node_id))
-#     node.record_message(parsed_message)
+def record_message(**kwargs):
+    message = request.form
+    attachments = request.files.values()
+    node_id = message['To'][:5]
+    parsed_message = {
+        'To': message['To'],
+        'From': message['From'],
+        'subject': message['subject'],
+        'text': message['stripped-text'],
+        'attachments': attachments
+    }
+    node = Node.find_one(Q('_id','eq',node_id))
+    node.record_message(parsed_message)
 #
 # def bounced_message(**kwargs):
 #     message = request.form.to_dict()
