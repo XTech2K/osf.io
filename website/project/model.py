@@ -654,7 +654,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             self.contributors.append(self.creator)
             self.set_visible(self.creator, visible=True, log=False)
             self.add_member(self.creator)
-            if self.category == 'project':
+            if self.category == 'project' and not kwargs.get('parent'):
                 self.has_mailing_list = True
 
             # Add default creator permissions
@@ -1043,6 +1043,17 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         self.update_mailing = True
         self.save()
 
+    def update_member(self, user, new_email=False, new_name=False):
+        try:
+            if new_email:
+                self.mailing_info[user._id]['email'] = new_email
+            if new_name:
+                self.mailing_info[user._id]['name'] = new_name
+            self.update_mailing = True
+            self.save()
+        except KeyError:
+            pass
+
     def record_message(self, message):
         # mailing_lists.get_message(self._id, message)
         sender = get_user(email=message['From']) or self.contributors[0]
@@ -1119,7 +1130,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
         saved_fields = super(Node, self).save(*args, **kwargs)
 
-        if self.update_mailing:
+        if self.update_mailing and not (self.is_registration or self.is_dashboard):
             mailing_lists.update_list(self._id, self.title, self.has_mailing_list,
                                       self.mailing_info)
             self.update_mailing = False
@@ -1543,6 +1554,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
         original_title = self.title
         self.title = title
+        self.update_mailing = True
         self.add_log(
             action=NodeLog.EDITED_TITLE,
             params={

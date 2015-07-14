@@ -209,6 +209,10 @@ def update_user(auth):
             for list_name, subscription in user.mailing_lists.iteritems():
                 if subscription:
                     mailchimp_utils.unsubscribe_mailchimp(list_name, user._id, username=user.username)
+
+            # Change project mailing list subscription to new email
+            for node in user.node__contributed:
+                node.update_member(user, new_email=username)
             user.username = username
 
     ###################
@@ -619,6 +623,8 @@ def unserialize_names(**kwargs):
     user.family_name = (json_data.get('family') or '').strip()
     user.suffix = (json_data.get('suffix') or '').strip()
     user.save()
+    for node in user.node__contributed:
+        node.update_member(user, new_name=user.fullname)
 
 
 def verify_user_match(auth, **kwargs):

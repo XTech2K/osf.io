@@ -47,13 +47,22 @@ def create_list(node_id, node_title, subscriptions):
         targets.append(subscriptions[_id]['email'])
     send_message(node_id, node_title, targets, {
         'subject': "Mailing List Created for " + node_title,
-        'text': "A mailing list has been created/enabled for the `oject " + node_title + "."
+        'text': "A mailing list has been created/enabled for the project " + node_title + "."
     })
 
 def delete_list(node_id):
     requests.delete(
         'https://api.mailgun.net/v3/lists/' + address(node_id),
         auth=('api', MAILGUN_API_KEY)
+    )
+
+def update_title(node_id, node_title):
+    requests.put(
+        'https://api.mailgun.net/v3/lists/' + address(node_id),
+        auth=('api', MAILGUN_API_KEY),
+        data={
+            'name': node_title + ' Mailing List'
+        }
     )
 
 def add_member(node_id, user, user_id):
@@ -75,21 +84,14 @@ def remove_member(node_id, email):
         auth=('api', MAILGUN_API_KEY)
     )
 
-def subscribe(node_id, email):
+def update_member(node_id, user, old_email):
     requests.put(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
+        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + old_email,
         auth=('api', MAILGUN_API_KEY),
         data={
-            'subscribed': True
-        }
-    )
-
-def unsubscribe(node_id, email):
-    requests.put(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
-        auth=('api', MAILGUN_API_KEY),
-        data={
-            'subscribed': False
+            'subscribed': user['subscribed'],
+            'address': user['email'],
+            'name': user['name'],
         }
     )
 
@@ -118,8 +120,6 @@ def upload_attachment(attachment, node, user):
 @queued_task
 @app.task
 def update_list(node_id, node_title, node_has_list, subscriptions):
-    contrib_ids = subscriptions.keys()
-
     info, members = get_list(node_id)
 
     if node_has_list:
@@ -127,23 +127,28 @@ def update_list(node_id, node_title, node_has_list, subscriptions):
         if 'list' in info.keys():
             info = info['list']
             members = members['items']
-            member_ids = [member['vars']['id'] for member in members]
-
-            if info['name'] != node_title:
-                pass
-
-            for contrib_id in contrib_ids:
-                if contrib_id not in member_ids:
-                    add_member(node_id, subscriptions[contrib_id], contrib_id)
-
+            list_members = {}
             for member in members:
-                if member['vars']['id'] not in subscriptions.keys():
-                    remove_member(node_id, member['address'])
-                elif member['subscribed'] != subscriptions[member['vars']['id']]['subscribed']:
-                    if member['subscribed'] == False:
-                        subscribe(node_id, member['address'])
-                    else:
-                        unsubscribe(node_id, member['address'])
+                list_members[member['vars']['id']] = {
+                    'subscribed': member['subscribed'],
+                    'email': member['address'],
+                    'name': member['name']
+                }
+            if info['name'] != node_title + ' Mailing List':
+                update_title(node_id, node_title)
+
+            ids_to_add = set(subscriptions.keys()).difference(set(list_members.keys()))
+            for contrib_id in ids_to_add:
+                add_member(node_id, subscriptions[contrib_id], contrib_id)
+
+            ids_to_remove = set(list_members.keys()).difference(set(subscriptions.keys()))
+            for member_id in ids_to_remove:
+                remove_member(node_id, list_members[member_id]['address'])
+                del list_members[member_id]
+
+            for member_id in list_members.keys():
+                if list_members[member_id] != subscriptions[member_id]:
+                    update_member(node_id, subscriptions[member_id], list_members[member_id]['email'])
 
         else:
             create_list(node_id, node_title, subscriptions)
