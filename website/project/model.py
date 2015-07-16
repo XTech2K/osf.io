@@ -1058,7 +1058,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             pass
 
     def check_log_folder(self, user, save=False):
-        self.logging_folder, self.logging_suffix = mailing_lists.check_log_folder(self, user, self.logging_folder, self.logging_suffix)
+        self.logging_folder, self.logging_suffix = mailing_lists.check_log_folder(self, user, self.logging_folder,
+                                                                                  self.logging_suffix)
 
         if save:
             self.save()
@@ -1075,9 +1076,11 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         self.save()
 
     def record_message(self, message):
-        find_sender = re.search(r'<\S*>', message['From'])
+        # TODO: deal with troll emails with < or > in them
+        find_sender = re.search(r'<\S*>$', message['From'])
         sender = get_user(email=find_sender.group(0)[1:-1])
-        full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + "\n\nThis comment was originally an email to this project's mailing list"
+        full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + \
+                       "\n\nThis comment was originally an email to this project's mailing list"
 
         if 'write' in self.permissions[sender._id]:
             self.check_log_folder(sender)
@@ -1155,9 +1158,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
         saved_fields = super(Node, self).save(*args, **kwargs)
 
-        if self.update_mailing and not (self.is_registration or self.is_dashboard):
-            mailing_lists.update_list(self._id, self.title, self.has_mailing_list,
-                                      self.mailing_info)
+        if self.update_mailing and not (self.is_deleted or self.is_registration or self.is_dashboard):
+            mailing_lists.update_list(self._id, self.title, self.has_mailing_list, self.mailing_info)
             self.update_mailing = False
 
         if first_save and is_original and not suppress_log:
@@ -1693,6 +1695,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             )
 
         self.delete_mailing_list()
+        mailing_lists.update_list(self._id, self.title, self.has_mailing_list, self.mailing_info)
 
         self.is_deleted = True
         self.deleted_date = date
