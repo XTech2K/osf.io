@@ -619,6 +619,9 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
     has_mailing_list = fields.BooleanField(default=False)
     mailing_info = fields.DictionaryField()
     update_mailing = fields.BooleanField(default=False)
+    log_mails = fields.BooleanField(default=False)
+    logging_folder = fields.StringField(default=None)
+    logging_suffix = fields.StringField(default='')
     # mailed_messages = fields.DictionaryField(list=True)
 
     logs = fields.ForeignField('nodelog', list=True, backref='logged')
@@ -1054,12 +1057,34 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         except KeyError:
             pass
 
+    def check_log_folder(self, user, save=False):
+        self.logging_folder, self.logging_suffix = mailing_lists.check_log_folder(self, user, self.logging_folder, self.logging_suffix)
+
+        if save:
+            self.save()
+
+    def enable_logging(self, user):
+        self.log_mails = True
+        self.check_log_folder(user)
+
+        self.save()
+
+    def disable_logging(self):
+        self.log_mails = False
+
+        self.save()
+
     def record_message(self, message):
-        # mailing_lists.get_message(self._id, message)
-        sender = get_user(email=message['From']) or self.contributors[0]
+        find_sender = re.search(r'<\S*>', message['From'])
+        sender = get_user(email=find_sender.group(0)[1:-1])
         full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + "\n\nThis comment was originally an email to this project's mailing list"
-        for attachment in message['attachments']:
-            mailing_lists.upload_attachment(attachment, self, sender)
+
+        if 'write' in self.permissions[sender._id]:
+            self.check_log_folder(sender)
+            for attachment in message['attachments']:
+                mailing_lists.upload_attachment(attachment, self, sender, self.logging_folder)
+
+        self.save()
 
     def update(self, fields, auth=None, save=True):
         if self.is_registration:

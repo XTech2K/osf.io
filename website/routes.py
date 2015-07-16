@@ -1397,6 +1397,26 @@ def make_url_map(app):
 
         Rule(
             [
+                '/project/<pid>/mailing/log/',
+                '/project/<pid>/node/<nid>/mailing/log/',
+            ],
+            'post',
+            project_views.node.enable_logging,
+            json_renderer,
+        ),
+
+        Rule(
+            [
+                '/project/<pid>/mailing/log/',
+                '/project/<pid>/node/<nid>/mailing/log/',
+            ],
+            'delete',
+            project_views.node.disable_logging,
+            json_renderer,
+        ),
+
+        Rule(
+            [
                 '/mailing/messages/',
             ],
             'post',

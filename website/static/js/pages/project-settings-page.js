@@ -84,6 +84,14 @@ $(document).ready(function() {
         ProjectSettings.createMailingList(ctx.node.nodeType);
     });
 
+    $('#enableLogging').on('click', function() {
+        ProjectSettings.enableLogging(ctx.node.nodeType);
+    });
+
+    $('#disableLogging').on('click', function() {
+        ProjectSettings.disableLogging(ctx.node.nodeType);
+    });
+
     $('#deleteMailing').on('click', function() {
         ProjectSettings.deleteMailingList(ctx.node.nodeType);
     });

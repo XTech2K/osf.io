@@ -188,6 +188,30 @@ ProjectSettings.createMailingList = function(nodeType) {
     request.fail($osf.handleJSONError);
 };
 
+ProjectSettings.enableLogging = function(nodeType) {
+    var request = $.ajax({
+        type: 'post',
+        dataType: 'json',
+        url: nodeApiUrl + "mailing/log/"
+    });
+    request.done(function() {
+        window.location.reload();
+    });
+    request.fail($osf.handleJSONError);
+};
+
+ProjectSettings.disableLogging = function(nodeType) {
+    var request = $.ajax({
+        type: 'delete',
+        dataType: 'json',
+        url: nodeApiUrl + "mailing/log/"
+    });
+    request.done(function() {
+        window.location.reload();
+    });
+    request.fail($osf.handleJSONError);
+};
+
 ProjectSettings.deleteMailingList = function(nodeType) {
 
     var message = "<p>Disabling this project's mailing list will prevent all members from recieving or sending to the mailing list location.";

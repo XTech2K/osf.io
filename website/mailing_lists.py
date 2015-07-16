@@ -106,9 +106,39 @@ def send_message(node_id, node_title, targets, message):
               "subject": message['subject'],
               "text": message['text']})
 
-def upload_attachment(attachment, node, user):
+def check_log_folder(node, user, current_path=None, name_suffix=''):
+
+    if current_path:
+        url = waterbutler_url_for('metadata', 'osfstorage', current_path, node, user=user)
+        res = requests.get(url)
+        res = json.loads(res.text)
+        if 'data' in res.keys():
+            return current_path, name_suffix
+
+    url = waterbutler_url_for('create_folder', 'osfstorage', '/Mailed Attachments/', node, user=user)
+    res = requests.post(url)
+    res = json.loads(res.text)
+
+    if res.get('path'):
+        return res.get('path'), ''
+
+    else:
+        created=False
+        i = 0
+        while not created:
+            i += 1
+            url = waterbutler_url_for('create_folder', 'osfstorage', '/Mailed Attachments({})/'.format(str(i)), node, user=user)
+            res = requests.post(url)
+            res = json.loads(res.text)
+            if res.get('path'):
+                created=True
+
+        name_suffix = '({})'.format(str(i)) if i else ''
+        return res.get('path'), name_suffix
+
+def upload_attachment(attachment, node, user, folder_path):
     attachment.seek(0)
-    name = '/' + (attachment.filename or settings.MISSING_FILE_NAME)
+    name = folder_path + (attachment.filename or settings.MISSING_FILE_NAME)
     content = attachment.read()
     upload_url = waterbutler_url_for('upload', 'osfstorage', name, node, user=user)
 

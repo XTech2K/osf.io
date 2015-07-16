@@ -344,6 +344,16 @@ def delete_list(node, **kwargs):
     node.delete_mailing_list()
     node.save()
 
+@must_have_permission(ADMIN)
+@must_not_be_registration
+def enable_logging(node, auth, **kwargs):
+    node.enable_logging(auth.user)
+
+@must_have_permission(ADMIN)
+@must_not_be_registration
+def disable_logging(node, auth, **kwargs):
+    node.disable_logging()
+
 def record_message(**kwargs):
     message = request.form
     attachments = request.files.values()
@@ -356,7 +366,8 @@ def record_message(**kwargs):
         'attachments': attachments
     }
     node = Node.find_one(Q('_id','eq',node_id))
-    node.record_message(parsed_message)
+    if node.log_mails:
+        node.record_message(parsed_message)
 #
 # def bounced_message(**kwargs):
 #     message = request.form.to_dict()
@@ -796,6 +807,8 @@ def _view_project(node, auth, primary=False):
             'piwik_site_id': node.piwik_site_id,
             'comment_level': node.comment_level,
             'has_mailing_list': node.has_mailing_list,
+            'log_mails': node.log_mails,
+            'log_mail_folder_name': 'Mailed Attachments' + node.logging_suffix,
             'has_comments': bool(getattr(node, 'commented', [])),
             'has_children': bool(getattr(node, 'commented', False)),
             'identifiers': {

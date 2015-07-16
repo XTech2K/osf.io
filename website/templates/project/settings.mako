@@ -294,7 +294,19 @@
                                     <button id="mailingSub" class="btn btn-primary">Subscribe</button>
                                 % endif
                             </div>
+                            % if node['log_mails']:
+                                <div class="help-block" style="padding-left: 15px">
+                                    <p>You can find emailed attachments in the folder named "${node['log_mail_folder_name']}"</p>
+                                </div>
+                            % endif
                             % if 'admin' in user['permissions']:
+                                <div class="panel-body">
+                                    % if node['log_mails']:
+                                        <button id="disableLogging" class="btn btn-primary">Disable Logging</button>
+                                    % else:
+                                        <button id="enableLogging" class="btn btn-primary">Enable Logging</button>
+                                    % endif
+                                </div>
                                 <div class="panel-body">
                                     <button id="deleteMailing" class="btn btn-danger">Disable</button>
                                 </div>
