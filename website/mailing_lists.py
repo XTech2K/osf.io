@@ -7,6 +7,7 @@ from framework import sentry
 from framework.tasks import app
 from framework.tasks.handlers import queued_task
 from framework.auth.signals import user_confirmed
+from framework.exceptions import HTTPError
 
 from website import settings
 from website.util import waterbutler_url_for
@@ -25,18 +26,22 @@ def get_list(node_id):
         'https://api.mailgun.net/v3/lists/' + address(node_id),
         auth=('api', MAILGUN_API_KEY),
     )
+    if info.status_code != 200 and info.status_code != 404:
+        raise HTTPError(400)
     info = json.loads(info.text)
 
     members = requests.get(
         'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members',
         auth=('api', MAILGUN_API_KEY),
     )
+    if members.status_code != 200 and members.status_code != 404:
+        raise HTTPError(400)
     members = json.loads(members.text)
 
     return info, members
 
 def create_list(node_id, node_title, subscriptions):
-    requests.post(
+    res = requests.post(
         'https://api.mailgun.net/v3/lists',
         auth=('api', MAILGUN_API_KEY),
         data={
@@ -45,6 +50,8 @@ def create_list(node_id, node_title, subscriptions):
             'access_level': 'members'
         }
     )
+    if res.status_code != 200:
+        raise HTTPError(400)
     targets = []
     for _id in subscriptions.keys():
         add_member(node_id, subscriptions[_id], _id)
@@ -55,23 +62,27 @@ def create_list(node_id, node_title, subscriptions):
     })
 
 def delete_list(node_id):
-    requests.delete(
+    res = requests.delete(
         'https://api.mailgun.net/v3/lists/' + address(node_id),
         auth=('api', MAILGUN_API_KEY)
     )
+    if res.status_code != 200:
+        raise HTTPError(400)
 
 def update_title(node_id, node_title):
-    requests.put(
+    res = requests.put(
         'https://api.mailgun.net/v3/lists/' + address(node_id),
         auth=('api', MAILGUN_API_KEY),
         data={
             'name': node_title + ' Mailing List'
         }
     )
+    if res.status_code != 200:
+        raise HTTPError(400)
 
 def add_member(node_id, user, user_id):
     unsub_url = OWN_URL + node_id + '/settings/#configureMailingListAnchor'
-    requests.post(
+    res = requests.post(
         'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members',
         auth=('api', MAILGUN_API_KEY),
         data={
@@ -81,15 +92,19 @@ def add_member(node_id, user, user_id):
             'vars': '{"list_unsubscribe": "' + unsub_url + '", "id": "' + user_id + '"}'
         }
     )
+    if res.status_code != 200:
+        raise HTTPError(400)
 
 def remove_member(node_id, email):
-    requests.delete(
+    res = requests.delete(
         'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
         auth=('api', MAILGUN_API_KEY)
     )
+    if res.status_code != 200:
+        raise HTTPError(400)
 
 def update_member(node_id, user, old_email):
-    requests.put(
+    res = requests.put(
         'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + old_email,
         auth=('api', MAILGUN_API_KEY),
         data={
@@ -98,6 +113,8 @@ def update_member(node_id, user, old_email):
             'name': user['name'],
         }
     )
+    if res.status_code != 200:
+        raise HTTPError(400)
 
 ###############################################################################
 # Called Functions
@@ -149,54 +166,64 @@ def upload_attachment(attachment, node, user, folder_path):
 ###############################################################################
 
 @queued_task
-@app.task
-def update_list(node_id, node_title, node_has_list, subscriptions):
-    info, members = get_list(node_id)
+@app.task(bind=True, default_retry_delay=20)
+def update_list(self, node_id, node_title, node_has_list, subscriptions):
+    try:
+        info, members = get_list(node_id)
 
-    if node_has_list:
+        if node_has_list:
 
-        if 'list' in info.keys():
-            info = info['list']
-            members = members['items']
-            list_members = {}
-            for member in members:
-                list_members[member['vars']['id']] = {
-                    'subscribed': member['subscribed'],
-                    'email': member['address'],
-                    'name': member['name']
-                }
-            if info['name'] != node_title + ' Mailing List':
-                update_title(node_id, node_title)
+            if 'list' in info.keys():
+                info = info['list']
+                members = members['items']
+                list_members = {}
+                for member in members:
+                    list_members[member['vars']['id']] = {
+                        'subscribed': member['subscribed'],
+                        'email': member['address'],
+                        'name': member['name']
+                    }
+                if info['name'] != node_title + ' Mailing List':
+                    update_title(node_id, node_title)
 
-            ids_to_add = set(subscriptions.keys()).difference(set(list_members.keys()))
-            for contrib_id in ids_to_add:
-                add_member(node_id, subscriptions[contrib_id], contrib_id)
+                ids_to_add = set(subscriptions.keys()).difference(set(list_members.keys()))
+                for contrib_id in ids_to_add:
+                    add_member(node_id, subscriptions[contrib_id], contrib_id)
 
-            ids_to_remove = set(list_members.keys()).difference(set(subscriptions.keys()))
-            for member_id in ids_to_remove:
-                remove_member(node_id, list_members[member_id]['address'])
-                del list_members[member_id]
+                ids_to_remove = set(list_members.keys()).difference(set(subscriptions.keys()))
+                for member_id in ids_to_remove:
+                    remove_member(node_id, list_members[member_id]['address'])
+                    del list_members[member_id]
 
-            for member_id in list_members.keys():
-                if list_members[member_id] != subscriptions[member_id]:
-                    update_member(node_id, subscriptions[member_id], list_members[member_id]['email'])
+                for member_id in list_members.keys():
+                    if list_members[member_id] != subscriptions[member_id]:
+                        update_member(node_id, subscriptions[member_id], list_members[member_id]['email'])
+
+            else:
+                create_list(node_id, node_title, subscriptions)
+                return
 
         else:
-            create_list(node_id, node_title, subscriptions)
-            return
 
-    else:
+            if 'list' in info.keys():
+                delete_list(node_id)
 
-        if 'list' in info.keys():
-            delete_list(node_id)
+    except (HTTPError, requests.ConnectionError):
+        self.retry()
 
 @queued_task
-@app.task
-def send_message(node_id, node_title, targets, message):
-    requests.post(
-        "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
-        auth=("api", MAILGUN_API_KEY),
-        data={"from": node_title + " Mailing List <" + address(node_id) + ">",
-              "to": targets,
-              "subject": message['subject'],
-              "text": message['text']})
+@app.task(bind=True, default_retry_delay=20)
+def send_message(self, node_id, node_title, targets, message):
+    try:
+        res = requests.post(
+            "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
+            auth=("api", MAILGUN_API_KEY),
+            data={"from": node_title + " Mailing List <" + address(node_id) + ">",
+                  "to": targets,
+                  "subject": message['subject'],
+                  "text": message['text']})
+        if res.status_code != 200:
+            raise HTTPError(400)
+
+    except (HTTPError, requests.ConnectionError):
+        self.retry()
