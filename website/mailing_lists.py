@@ -13,6 +13,10 @@ from website.util import waterbutler_url_for
 
 from website.settings.local import MAILGUN_API_KEY, MAILGUN_DOMAIN, OWN_URL
 
+###############################################################################
+# Base Functions
+###############################################################################
+
 def address(node_id):
     return node_id + '@' + MAILGUN_DOMAIN
 
@@ -95,16 +99,9 @@ def update_member(node_id, user, old_email):
         }
     )
 
-@queued_task
-@app.task
-def send_message(node_id, node_title, targets, message):
-    requests.post(
-        "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
-        auth=("api", MAILGUN_API_KEY),
-        data={"from": node_title + " Mailing List <" + address(node_id) + ">",
-              "to": targets,
-              "subject": message['subject'],
-              "text": message['text']})
+###############################################################################
+# Called Functions
+###############################################################################
 
 def check_log_folder(node, user, current_path=None, name_suffix=''):
 
@@ -147,6 +144,10 @@ def upload_attachment(attachment, node, user, folder_path):
         data=content,
     )
 
+###############################################################################
+# Celery Tasks
+###############################################################################
+
 @queued_task
 @app.task
 def update_list(node_id, node_title, node_has_list, subscriptions):
@@ -188,3 +189,14 @@ def update_list(node_id, node_title, node_has_list, subscriptions):
 
         if 'list' in info.keys():
             delete_list(node_id)
+
+@queued_task
+@app.task
+def send_message(node_id, node_title, targets, message):
+    requests.post(
+        "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
+        auth=("api", MAILGUN_API_KEY),
+        data={"from": node_title + " Mailing List <" + address(node_id) + ">",
+              "to": targets,
+              "subject": message['subject'],
+              "text": message['text']})
