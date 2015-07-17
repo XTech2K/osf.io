@@ -366,7 +366,7 @@ def record_message(**kwargs):
         'attachments': attachments
     }
     node = Node.find_one(Q('_id','eq',node_id))
-    if node.log_mails:
+    if node.has_mailing_list and node.log_mails:
         node.record_message(parsed_message)
 #
 # def bounced_message(**kwargs):
