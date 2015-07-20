@@ -21,16 +21,16 @@ from website.settings.local import MAILGUN_API_KEY, MAILGUN_DOMAIN, OWN_URL
 def address(node_id):
     return node_id + '@' + MAILGUN_DOMAIN
 
-def list_sender(node_id):
+def list_sender(node_id, node_title):
     return {
-        'name': node_id + ' Mailing List',
+        'name': '{} Mailing List'.format(node_title),
         'email': address(node_id),
         'subscribed': False
     }
 
 def get_list(node_id):
     info = requests.get(
-        'https://api.mailgun.net/v3/lists/' + address(node_id),
+        'https://api.mailgun.net/v3/lists/{}'.format(address(node_id)),
         auth=('api', MAILGUN_API_KEY),
     )
     if info.status_code != 200 and info.status_code != 404:
@@ -38,7 +38,7 @@ def get_list(node_id):
     info = json.loads(info.text)
 
     members = requests.get(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members',
+        'https://api.mailgun.net/v3/lists/{}/members'.format(address(node_id)),
         auth=('api', MAILGUN_API_KEY),
     )
     if members.status_code != 200 and members.status_code != 404:
@@ -53,7 +53,7 @@ def create_list(node_id, node_title, subscriptions):
         auth=('api', MAILGUN_API_KEY),
         data={
             'address': address(node_id),
-            'name': node_title + ' Mailing List',
+            'name': '{} Mailing List'.format(node_title),
             'access_level': 'members'
         }
     )
@@ -62,13 +62,13 @@ def create_list(node_id, node_title, subscriptions):
     for _id in subscriptions.keys():
         add_member(node_id, subscriptions[_id], _id)
     send_message(node_id, node_title, {
-        'subject': "Mailing List Created for " + node_title,
-        'text': "A mailing list has been created/enabled for the project " + node_title + "."
+        'subject': 'Mailing List Created for {}'.format(node_title),
+        'text': 'A mailing list has been created/enabled for the project {}.'.format(node_title)
     })
 
 def delete_list(node_id):
     res = requests.delete(
-        'https://api.mailgun.net/v3/lists/' + address(node_id),
+        'https://api.mailgun.net/v3/lists/{}'.format(address(node_id)),
         auth=('api', MAILGUN_API_KEY)
     )
     if res.status_code != 200:
@@ -76,25 +76,25 @@ def delete_list(node_id):
 
 def update_title(node_id, node_title):
     res = requests.put(
-        'https://api.mailgun.net/v3/lists/' + address(node_id),
+        'https://api.mailgun.net/v3/lists/{}'.format(address(node_id)),
         auth=('api', MAILGUN_API_KEY),
         data={
-            'name': node_title + ' Mailing List'
+            'name': '{} Mailing List'.format(node_title)
         }
     )
     if res.status_code != 200:
         raise HTTPError(400)
 
 def add_member(node_id, user, user_id):
-    unsub_url = OWN_URL + node_id + '/settings/#configureMailingListAnchor'
+    unsub_url = '{0}{1}/settings/#configureMailingListAnchor'.format(OWN_URL, node_id)
     res = requests.post(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members',
+        'https://api.mailgun.net/v3/lists/{}/members'.format(address(node_id)),
         auth=('api', MAILGUN_API_KEY),
         data={
             'subscribed': user['subscribed'],
             'address': user['email'],
             'name': user['name'],
-            'vars': '{"list_unsubscribe": "' + unsub_url + '", "id": "' + user_id + '"}'
+            'vars': json.dumps({'list_unsubscribe': unsub_url, 'id': user_id})
         }
     )
     if res.status_code != 200:
@@ -102,7 +102,7 @@ def add_member(node_id, user, user_id):
 
 def remove_member(node_id, email):
     res = requests.delete(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + email,
+        'https://api.mailgun.net/v3/lists/{0}/members/{1}'.format(address(node_id), email),
         auth=('api', MAILGUN_API_KEY)
     )
     if res.status_code != 200:
@@ -110,7 +110,7 @@ def remove_member(node_id, email):
 
 def update_member(node_id, user, old_email):
     res = requests.put(
-        'https://api.mailgun.net/v3/lists/' + address(node_id) + '/members/' + old_email,
+        'https://api.mailgun.net/v3/lists/{0}/members/{1}'.format(address(node_id), old_email),
         auth=('api', MAILGUN_API_KEY),
         data={
             'subscribed': user['subscribed'],
@@ -174,7 +174,7 @@ def upload_attachment(attachment, node, user, folder_path):
 @app.task(bind=True, default_retry_delay=120)
 def update_list(self, node_id, node_title, node_has_list, subscriptions):
     # Need to put the sender in the list of members as '' to avoid potential conflicts
-    subscriptions[''] = list_sender(node_id)
+    subscriptions[''] = list_sender(node_id, node_title)
 
     try:
         info, members = get_list(node_id)
@@ -191,7 +191,7 @@ def update_list(self, node_id, node_title, node_has_list, subscriptions):
                         'email': member['address'],
                         'name': member['name']
                     }
-                if info['name'] != node_title + ' Mailing List':
+                if info['name'] != ' Mailing List'.format(node_title):
                     update_title(node_id, node_title)
 
                 ids_to_add = set(subscriptions.keys()).difference(set(list_members.keys()))
@@ -224,12 +224,12 @@ def update_list(self, node_id, node_title, node_has_list, subscriptions):
 def send_message(self, node_id, node_title, message):
     try:
         res = requests.post(
-            "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
-            auth=("api", MAILGUN_API_KEY),
-            data={"from": node_title + " Mailing List <" + address(node_id) + ">",
-                  "to": address(node_id),
-                  "subject": message['subject'],
-                  "html": '<html>' + message['text'] + '</html>'})
+            'https://api.mailgun.net/v3/{}/messages'.format(MAILGUN_DOMAIN),
+            auth=('api', MAILGUN_API_KEY),
+            data={'from': '{0} Mailing List <{1}>'.format(node_title,address(node_id)),
+                  'to': address(node_id),
+                  'subject': message['subject'],
+                  'html': '<html>{}</html>'.format(message['text'])})
         if res.status_code != 200:
             raise HTTPError(400)
 
