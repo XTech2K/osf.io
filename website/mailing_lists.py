@@ -21,6 +21,13 @@ from website.settings.local import MAILGUN_API_KEY, MAILGUN_DOMAIN, OWN_URL
 def address(node_id):
     return node_id + '@' + MAILGUN_DOMAIN
 
+def list_sender(node_id):
+    return {
+        'name': node_id + ' Mailing List',
+        'email': address(node_id),
+        'subscribed': False
+    }
+
 def get_list(node_id):
     info = requests.get(
         'https://api.mailgun.net/v3/lists/' + address(node_id),
@@ -52,11 +59,9 @@ def create_list(node_id, node_title, subscriptions):
     )
     if res.status_code != 200:
         raise HTTPError(400)
-    targets = []
     for _id in subscriptions.keys():
         add_member(node_id, subscriptions[_id], _id)
-        targets.append(subscriptions[_id]['email'])
-    send_message(node_id, node_title, targets, {
+    send_message(node_id, node_title, {
         'subject': "Mailing List Created for " + node_title,
         'text': "A mailing list has been created/enabled for the project " + node_title + "."
     })
@@ -168,6 +173,9 @@ def upload_attachment(attachment, node, user, folder_path):
 @queued_task
 @app.task(bind=True, default_retry_delay=120)
 def update_list(self, node_id, node_title, node_has_list, subscriptions):
+    # Need to put the sender in the list of members as '' to avoid potential conflicts
+    subscriptions[''] = list_sender(node_id)
+
     try:
         info, members = get_list(node_id)
 
@@ -213,15 +221,15 @@ def update_list(self, node_id, node_title, node_has_list, subscriptions):
 
 @queued_task
 @app.task(bind=True, default_retry_delay=120)
-def send_message(self, node_id, node_title, targets, message):
+def send_message(self, node_id, node_title, message):
     try:
         res = requests.post(
             "https://api.mailgun.net/v3/" + MAILGUN_DOMAIN + "/messages",
             auth=("api", MAILGUN_API_KEY),
             data={"from": node_title + " Mailing List <" + address(node_id) + ">",
-                  "to": targets,
+                  "to": address(node_id),
                   "subject": message['subject'],
-                  "text": message['text']})
+                  "html": '<html>' + message['text'] + '</html>'})
         if res.status_code != 200:
             raise HTTPError(400)
 
