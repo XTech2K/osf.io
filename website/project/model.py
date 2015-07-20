@@ -657,8 +657,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
             self.contributors.append(self.creator)
             self.set_visible(self.creator, visible=True, log=False)
             self.add_member(self.creator)
-            if self.category == 'project' and not kwargs.get('parent'):
-                self.has_mailing_list = True
+        if self.category == 'project' and not kwargs.get('parent'):
+            self.create_mailing_list()
 
             # Add default creator permissions
             for permission in CREATOR_PERMISSIONS:

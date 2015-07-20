@@ -117,7 +117,7 @@ def update_member(node_id, user, old_email):
         raise HTTPError(400)
 
 ###############################################################################
-# Called Functions
+# Direct Functions
 ###############################################################################
 
 def check_log_folder(node, user, current_path=None, name_suffix=''):
@@ -166,7 +166,7 @@ def upload_attachment(attachment, node, user, folder_path):
 ###############################################################################
 
 @queued_task
-@app.task(bind=True, default_retry_delay=20)
+@app.task(bind=True, default_retry_delay=120)
 def update_list(self, node_id, node_title, node_has_list, subscriptions):
     try:
         info, members = get_list(node_id)
@@ -212,7 +212,7 @@ def update_list(self, node_id, node_title, node_has_list, subscriptions):
         self.retry()
 
 @queued_task
-@app.task(bind=True, default_retry_delay=20)
+@app.task(bind=True, default_retry_delay=120)
 def send_message(self, node_id, node_title, targets, message):
     try:
         res = requests.post(
