@@ -21,6 +21,9 @@ from website.settings.local import MAILGUN_API_KEY, MAILGUN_DOMAIN, OWN_URL
 def address(node_id):
     return node_id + '@' + MAILGUN_DOMAIN
 
+def project_url(node_id):
+    return OWN_URL + node_id
+
 def list_sender(node_id, node_title):
     return {
         'name': '{} Mailing List'.format(node_title),
@@ -86,7 +89,6 @@ def update_title(node_id, node_title):
         raise HTTPError(400)
 
 def add_member(node_id, user, user_id):
-    unsub_url = '{0}{1}/settings/#configureMailingListAnchor'.format(OWN_URL, node_id)
     res = requests.post(
         'https://api.mailgun.net/v3/lists/{}/members'.format(address(node_id)),
         auth=('api', MAILGUN_API_KEY),
@@ -94,7 +96,7 @@ def add_member(node_id, user, user_id):
             'subscribed': user['subscribed'],
             'address': user['email'],
             'name': user['name'],
-            'vars': json.dumps({'list_unsubscribe': unsub_url, 'id': user_id})
+            'vars': json.dumps({'project_url': project_url(node_id), 'id': user_id})
         }
     )
     if res.status_code != 200:

@@ -1435,6 +1435,15 @@ def make_url_map(app):
 
         Rule(
             [
+                '/mailing/unsubscribe/',
+            ],
+            'post',
+            project_views.node.unsubscribe_by_mail,
+            json_renderer,
+        ),
+
+        Rule(
+            [
                 '/project/<pid>/mailing/sub/',
                 '/project/<pid>/node/<nid>/mailing/sub/',
             ],

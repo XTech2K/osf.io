@@ -375,6 +375,14 @@ def record_message(**kwargs):
 #     node_id = message.get('mailing-list','*****')[:5]
 #     node = Node.find_one(Q('_id','eq',node_id))
 
+def unsubscribe_by_mail(**kwargs):
+    info = request.form
+    node_id = info['mailing-list'][:5]
+    email = info['recipient']
+    node=Node.find_one(Q('_id','eq',node_id))
+    node.unsubscribe_by_mail(email)
+
+
 @collect_auth
 @must_not_be_registration
 def subscribe_list(node, auth, **kwargs):
@@ -384,8 +392,6 @@ def subscribe_list(node, auth, **kwargs):
 @must_not_be_registration
 def unsubscribe_list(node, auth, **kwargs):
     node.unsubscribe_member(auth.user)
-
-
 
 
 @must_be_valid_project

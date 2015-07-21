@@ -653,12 +653,13 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         if kwargs.get('_is_loaded', False):
             return
 
+        if self.category == 'project' and not kwargs.get('parent'):
+            self.create_mailing_list()
+
         if self.creator:
             self.contributors.append(self.creator)
             self.set_visible(self.creator, visible=True, log=False)
             self.add_member(self.creator)
-        if self.category == 'project' and not kwargs.get('parent'):
-            self.create_mailing_list()
 
             # Add default creator permissions
             for permission in CREATOR_PERMISSIONS:
@@ -1088,6 +1089,10 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
                 mailing_lists.upload_attachment(attachment, self, sender, self.logging_folder)
 
         self.save()
+
+    def unsubscribe_by_mail(self, email):
+        user = get_user(email=email)
+        self.unsubscribe_member(user)
 
     def update(self, fields, auth=None, save=True):
         if self.is_registration:
