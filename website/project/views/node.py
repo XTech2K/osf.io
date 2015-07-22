@@ -3,6 +3,7 @@ import logging
 import httplib as http
 import math
 from itertools import islice
+import re
 
 from flask import request
 from modularodm import Q
@@ -338,29 +339,36 @@ def create_list(node, **kwargs):
     node.create_mailing_list()
     node.save()
 
+
 @must_have_permission(ADMIN)
 @must_not_be_registration
 def delete_list(node, **kwargs):
     node.delete_mailing_list()
     node.save()
 
+
 @must_have_permission(ADMIN)
 @must_not_be_registration
 def enable_logging(node, auth, **kwargs):
     node.enable_logging(auth.user)
+
 
 @must_have_permission(ADMIN)
 @must_not_be_registration
 def disable_logging(node, auth, **kwargs):
     node.disable_logging()
 
+
 def record_message(**kwargs):
     message = request.form
     attachments = request.files.values()
-    node_id = message['To'][:5]
+    node_id = re.search(r'[a-z0-9]*@', message['To']).group(0)[:-1]
+    sender_email = message['From']
+    # allow for both "{email}" syntax and "{name} <{email}>" syntax
+    if ' ' in sender_email:
+        sender_email = re.search(r'<\S*>$', sender_email).group(0)[1:-1]
     parsed_message = {
-        'To': message['To'],
-        'From': message['From'],
+        'From': sender_email,
         'subject': message['subject'],
         'text': message['stripped-text'],
         'attachments': attachments
@@ -369,17 +377,22 @@ def record_message(**kwargs):
     if node.has_mailing_list and node.log_mails:
         node.record_message(parsed_message)
 #
+#
 # def bounced_message(**kwargs):
 #     message = request.form.to_dict()
 #     print message
 #     node_id = message.get('mailing-list','*****')[:5]
 #     node = Node.find_one(Q('_id','eq',node_id))
 
+
 def unsubscribe_by_mail(**kwargs):
     info = request.form
-    node_id = info['mailing-list'][:5]
+    node_id = re.search(r'[a-z0-9]*@', info['mailing-list']).group(0)[:-1]
     email = info['recipient']
-    node=Node.find_one(Q('_id','eq',node_id))
+    # allow for both "{email}" syntax and "{name} <{email}>" syntax
+    if ' ' in email:
+        email = re.search(r'<\S*>$', email).group(0)[1:-1]
+    node = Node.find_one(Q('_id','eq',node_id))
     node.unsubscribe_by_mail(email)
 
 
@@ -387,6 +400,7 @@ def unsubscribe_by_mail(**kwargs):
 @must_not_be_registration
 def subscribe_list(node, auth, **kwargs):
     node.subscribe_member(auth.user)
+
 
 @collect_auth
 @must_not_be_registration

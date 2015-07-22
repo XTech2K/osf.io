@@ -1078,10 +1078,9 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
 
     def record_message(self, message):
         # TODO: deal with troll emails with < or > in them
-        find_sender = re.search(r'<\S*>$', message['From'])
-        sender = get_user(email=find_sender.group(0)[1:-1])
-        full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + \
-                       "\n\nThis comment was originally an email to this project's mailing list"
+        sender = get_user(email=message['From'])
+        # full_message = "<b>" + message['subject'] + "</b>" + "\n\n" + message['text'] + \
+        #                "\n\nThis comment was originally an email to this project's mailing list"
 
         if 'write' in self.permissions[sender._id]:
             self.check_log_folder(sender)
@@ -2165,6 +2164,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin):
         for i, contrib in enumerate(self.contributors):
             if contrib._primary_key == old._primary_key:
                 self.contributors[i] = new
+                self.add_member(new)
                 # Remove unclaimed record for the project
                 if self._primary_key in old.unclaimed_records:
                     del old.unclaimed_records[self._primary_key]
